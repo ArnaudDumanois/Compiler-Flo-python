@@ -21,26 +21,25 @@ class FloLexer(Lexer):
         t.value = int(t.value)
         return t
 
-    # cas particulier
-    IDENTIFIANT['si'] = SI
-    ECRIRE = r'ecrire'
-    LIRE = r'lire'
-    ET = r'et'
-    OU = r'ou'
-    NON = r'non'
-    VRAI = r'Vrai'
-    FAUX = r'Faux'
-    SI = r'si'
-    SINON = r'sinon'
-    TANTQUE = r'tantque'
-    RETOURNER = r'retourner'
-
-    # type
-    TYPE_ENTIER = r'entier'
-    TYPE_BOOLEEN = r'booleen'
-
     # Identifiants
     IDENTIFIANT = r'[a-zA-Z][a-zA-Z0-9_]*' # pour nommer les variables et les fonctions
+
+    # cas particulier
+    IDENTIFIANT['si'] = SI
+    IDENTIFIANT['sinon'] = SINON
+    IDENTIFIANT['tantque'] = TANTQUE
+    IDENTIFIANT['lire'] = LIRE
+    IDENTIFIANT['ecrire'] = ECRIRE
+    IDENTIFIANT['et'] = ET
+    IDENTIFIANT['ou'] = OU
+    IDENTIFIANT['non'] = NON
+    IDENTIFIANT['vrai'] = VRAI
+    IDENTIFIANT['faux'] = FAUX
+    IDENTIFIANT['retourner'] = RETOURNER
+
+    # type
+    IDENTIFIANT['booleen'] = TYPE_BOOLEEN
+    IDENTIFIANT['entier'] = TYPE_ENTIER
 
     # Opérateurs
     SUPERIEUR = r'>'
