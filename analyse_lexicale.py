@@ -5,15 +5,13 @@ from sly import Lexer
 class FloLexer(Lexer):
 
     tokens = {  IDENTIFIANT, ENTIER, ECRIRE, LIRE, TYPE_ENTIER, TYPE_BOOLEEN,
-                SUPERIEUR, INFERIEUR, INFERIEUR_OU_EGAL, SUPPERIEUR_OU_EGAL, EQUAL, NON_EQUAL,
-                #PLUS, MOINS, DIV, MULT, MOD,
+                INFERIEUR_EGAL, SUPERIEUR_EGAL, EGAL, NON_EGAL,
                 ET, OU, NON, VRAI, FAUX,
-                AFFECTATION, SI, SINON, TANTQUE, RETOURNER,
-                # OPEN_PAR, CLOSE_PAR, OPEN_ACC, CLOSE_ACC, PVIRGULE,
+                SI, SINON,TANT_QUE, RETOURNER,
               }
 
 
-    literals = {'+', '*', '/', '%', '(', ')', ";", '{', '}', '<', '>', '=', '!', ','}
+    literals = {'+', '-', '*', '/', '%', '(', ')', ";", '{', '}', '<', '>', '=', '!', ','}
     ignore = ' \t'
     ignore_comment = r'\#.*'
     @_(r'0|[1-9][0-9]*')
@@ -26,15 +24,16 @@ class FloLexer(Lexer):
 
     # cas particulier
     IDENTIFIANT['si'] = SI
+
     IDENTIFIANT['sinon'] = SINON
-    IDENTIFIANT['tantque'] = TANTQUE
+    IDENTIFIANT['tantque'] = TANT_QUE
     IDENTIFIANT['lire'] = LIRE
     IDENTIFIANT['ecrire'] = ECRIRE
     IDENTIFIANT['et'] = ET
     IDENTIFIANT['ou'] = OU
     IDENTIFIANT['non'] = NON
-    IDENTIFIANT['vrai'] = VRAI
-    IDENTIFIANT['faux'] = FAUX
+    IDENTIFIANT['Vrai'] = VRAI
+    IDENTIFIANT['Faux'] = FAUX
     IDENTIFIANT['retourner'] = RETOURNER
 
     # type
@@ -42,15 +41,12 @@ class FloLexer(Lexer):
     IDENTIFIANT['entier'] = TYPE_ENTIER
 
     # Opérateurs
-    SUPERIEUR = r'>'
-    INFERIEUR = r'<'
-    INFERIEUR_OU_EGAL = r'<='
-    SUPPERIEUR_OU_EGAL = r'>='
-    EQUAL = r'=='
-    NON_EQUAL = r'!='
+    INFERIEUR_EGAL = r'<='
+    SUPERIEUR_EGAL = r'>='
+    EGAL = r'=='
+    NON_EGAL = r'!='
 
     # Instructions
-    AFFECTATION = r'='
 
     # OPEN_PAR = r'\(' # a voir si on met
     # CLOSE_PAR = r'\)' # a voir si on met
