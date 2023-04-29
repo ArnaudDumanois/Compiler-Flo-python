@@ -5,15 +5,13 @@ from sly import Lexer
 class FloLexer(Lexer):
 
     tokens = {  IDENTIFIANT, ENTIER, ECRIRE, LIRE, TYPE_ENTIER, TYPE_BOOLEEN,
-                SUPERIEUR, INFERIEUR, INFERIEUR_OU_EGAL, SUPPERIEUR_OU_EGAL, EQUAL, NON_EQUAL,
-                #PLUS, MOINS, DIV, MULT, MOD,
+                INFERIEUR_EGAL, SUPERIEUR_EGAL, EGAL, NON_EGAL,
                 ET, OU, NON, VRAI, FAUX,
-                AFFECTATION, SI, SINON, TANTQUE, RETOURNER,
-                # OPEN_PAR, CLOSE_PAR, OPEN_ACC, CLOSE_ACC, PVIRGULE,
+                SI, SINON,TANT_QUE, RETOURNER,
               }
 
 
-    literals = {'+', '*', '/', '%', '(', ')', ";", '{', '}', '<', '>', '=', '!', ','}
+    literals = {'+', '-', '*', '/', '%', '(', ')', ";", '{', '}', '<', '>', '=', '!', ','}
     ignore = ' \t'
     ignore_comment = r'\#.*'
     @_(r'0|[1-9][0-9]*')
@@ -21,37 +19,34 @@ class FloLexer(Lexer):
         t.value = int(t.value)
         return t
 
-    # cas particulier
-    IDENTIFIANT['si'] = SI
-    ECRIRE = r'ecrire'
-    LIRE = r'lire'
-    ET = r'et'
-    OU = r'ou'
-    NON = r'non'
-    VRAI = r'Vrai'
-    FAUX = r'Faux'
-    SI = r'si'
-    SINON = r'sinon'
-    TANTQUE = r'tantque'
-    RETOURNER = r'retourner'
-
-    # type
-    TYPE_ENTIER = r'entier'
-    TYPE_BOOLEEN = r'booleen'
-
     # Identifiants
     IDENTIFIANT = r'[a-zA-Z][a-zA-Z0-9_]*' # pour nommer les variables et les fonctions
 
+    # cas particulier
+    IDENTIFIANT['si'] = SI
+
+    IDENTIFIANT['sinon'] = SINON
+    IDENTIFIANT['tantque'] = TANT_QUE
+    IDENTIFIANT['lire'] = LIRE
+    IDENTIFIANT['ecrire'] = ECRIRE
+    IDENTIFIANT['et'] = ET
+    IDENTIFIANT['ou'] = OU
+    IDENTIFIANT['non'] = NON
+    IDENTIFIANT['Vrai'] = VRAI
+    IDENTIFIANT['Faux'] = FAUX
+    IDENTIFIANT['retourner'] = RETOURNER
+
+    # type
+    IDENTIFIANT['booleen'] = TYPE_BOOLEEN
+    IDENTIFIANT['entier'] = TYPE_ENTIER
+
     # Opérateurs
-    SUPERIEUR = r'>'
-    INFERIEUR = r'<'
-    INFERIEUR_OU_EGAL = r'<='
-    SUPPERIEUR_OU_EGAL = r'>='
-    EQUAL = r'=='
-    NON_EQUAL = r'!='
+    INFERIEUR_EGAL = r'<='
+    SUPERIEUR_EGAL = r'>='
+    EGAL = r'=='
+    NON_EGAL = r'!='
 
     # Instructions
-    AFFECTATION = r'='
 
     # OPEN_PAR = r'\(' # a voir si on met
     # CLOSE_PAR = r'\)' # a voir si on met
