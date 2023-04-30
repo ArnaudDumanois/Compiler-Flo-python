@@ -151,13 +151,27 @@ class FloParser(Parser):
         return p[2]
 
 
-    @_('expr')
+    @_('booleen')
     def exprAll(self, p):
         return p[0]
+
     @_('VRAI',
        'FAUX')
-    def exprAll(self, p):
+    def booleen(self, p):
         return arbre_abstrait.Booleen(p[0])
+
+    @_('expr')
+    def booleen(self, p):
+        return p[0]
+
+    @_('booleen ET booleen',
+       'booleen OU booleen')
+    def booleen(self, p):
+        return arbre_abstrait.Operation(p[1],p[0],p[2])
+
+    @_('NON booleen')
+    def booleen(self, p):
+        return arbre_abstrait.Operation(p[0],p[1],None)
 
     @_('"-" expr %prec UMINUS')
     def expr(self, p):
@@ -173,26 +187,20 @@ class FloParser(Parser):
        'expr EGAL expr',
        'expr NON_EGAL expr',
        'expr INFERIEUR_EGAL expr',
-       'expr SUPERIEUR_EGAL expr',
-       'expr ET expr',
-       'expr OU expr')
+       'expr SUPERIEUR_EGAL expr',)
     def expr(self, p):
         return arbre_abstrait.Operation(p[1],p[0],p[2])
 
-    @_('NON expr')
+    @_('"(" booleen ")"')
     def expr(self, p):
-        return arbre_abstrait.Operation(p[0],p[1],None)
-
-    @_('"(" expr ")"')
-    def expr(self, p):
-        return p.expr #ou p[1]
+        return p[1]
 
     @_('ENTIER')
-    def expr(self, p):
+    def facteur(self, p):
         return arbre_abstrait.Entier(p.ENTIER) #p.ENTIER = p[0]
 
     @_('IDENTIFIANT')
-    def expr(self, p):
+    def facteur(self, p):
         return arbre_abstrait.Variable(p.IDENTIFIANT)
 
 
