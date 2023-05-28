@@ -150,7 +150,6 @@ class FloParser(Parser):
         p[2].expressions.insert(0,p[0])
         return p[2]
 
-
     @_('booleen')
     def exprAll(self, p):
         return p[0]
@@ -195,6 +194,12 @@ class FloParser(Parser):
     def expr(self, p):
         return p[1]
 
+
+    @_('facteur')
+    def expr(self,p):
+        return p[0]
+
+
     @_('ENTIER')
     def facteur(self, p):
         return arbre_abstrait.Entier(p.ENTIER) #p.ENTIER = p[0]
@@ -202,11 +207,6 @@ class FloParser(Parser):
     @_('IDENTIFIANT')
     def facteur(self, p):
         return arbre_abstrait.Variable(p.IDENTIFIANT)
-
-
-    @_('facteur')
-    def expr(self,p):
-        return p[0]
 
     @_('LIRE "(" ")"')
     def facteur(self,p):

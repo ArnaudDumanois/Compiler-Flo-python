@@ -119,10 +119,48 @@ def gen_operation(operation):
     
     code = {"+":"add","*":"imul"} #Un dictionnaire qui associe à chaque opérateur sa fonction nasm
     #Voir: https://www.bencode.net/blob/nasmcheatsheet.pdf
+
     if op in ['+']:
         nasm_instruction(code[op], "eax", "ebx", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
     if op == '*':
         nasm_instruction(code[op], "ebx", "", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
+    if op == '-':
+        nasm_instruction("sub", "eax", "ebx", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
+    if op == '/':
+        nasm_instruction("mov", "edx", "0", "", "met 0 dans edx pour la division")
+        nasm_instruction("idiv", "ebx", "", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
+    if op == '%':
+        nasm_instruction("mov", "edx", "0", "", "met 0 dans edx pour la division")
+        nasm_instruction("idiv", "ebx", "", "", "effectue l'opération eax" +op+"ebx et met le reste dans edx" )
+        nasm_instruction("mov", "eax", "edx", "", "met le reste dans eax" )
+    if op == '==':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("sete", "al", "", "", "met 1 dans al si eax == ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == '!=':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("setne", "al", "", "", "met 1 dans al si eax != ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == '<':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("setl", "al", "", "", "met 1 dans al si eax < ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == '>':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("setg", "al", "", "", "met 1 dans al si eax > ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == '<=':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("setle", "al", "", "", "met 1 dans al si eax <= ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == '>=':
+        nasm_instruction("cmp", "eax", "ebx", "", "compare eax et ebx")
+        nasm_instruction("setge", "al", "", "", "met 1 dans al si eax >= ebx, 0 sinon")
+        nasm_instruction("movzx", "eax", "al", "", "met 0 ou 1 dans eax")
+    if op == 'et':
+        nasm_instruction("and", "eax", "ebx", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
+    if op == 'ou':
+        nasm_instruction("or", "eax", "ebx", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
     nasm_instruction("push",  "eax" , "", "", "empile le résultat");	
 
 
