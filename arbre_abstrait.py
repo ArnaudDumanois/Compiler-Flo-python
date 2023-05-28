@@ -122,6 +122,16 @@ class Conditionnelle:
         self.listeInstructionsSi = listeInstructionsSi
         self.listeSinonSi = listeSinonSi
         self.listeSinon = listeInstructionSinon
+
+    def __iter__(self):
+        return iter([self.exprSi,self.listeInstructionsSi,self.listeSinonSi,self.listeSinon])
+
+    def __next__(self):
+        if self.listeSinonSi == None:
+            raise StopIteration
+        element = self.listeSinonSi
+        self.listeSinonSi = self.listeSinonSi.suivant
+        return element
     def afficher(self,indent=0):
         afficher("<conditionnelle>",indent)
         afficher("<Si>",indent)
