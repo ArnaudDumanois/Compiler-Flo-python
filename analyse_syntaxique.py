@@ -20,6 +20,8 @@ class FloParser(Parser):
             ('nonassoc', 'UMINUS'),
     )
 
+
+
     # Règles gramaticales et actions associées
 
     @_('listeInstructions')
@@ -29,7 +31,13 @@ class FloParser(Parser):
     @_('listeFonctions listeInstructions')
     def prog(self, p):
         return arbre_abstrait.Programme(p[0],p[1])
+    @_('TYPE_ENTIER')
+    def nomtype(self, p):
+        return arbre_abstrait.Type.ENTIER
 
+    @_('TYPE_BOOLEEN')
+    def nomtype(self, p):
+        return arbre_abstrait.Type.BOOLEEN
     @_('fonction')
     def listeFonctions(self, p):
         l = arbre_abstrait.ListeFonctions()
@@ -41,13 +49,11 @@ class FloParser(Parser):
         p[0].fonctions.insert(0,p[1])
         return p[0]
 
-    @_('TYPE_ENTIER IDENTIFIANT "(" listeParametres ")" "{" listeInstructions "}"',
-       'TYPE_BOOLEEN IDENTIFIANT "(" listeParametres ")" "{" listeInstructions "}"')
+    @_('nomtype IDENTIFIANT "(" listeParametres ")" "{" listeInstructions "}"')
     def fonction(self, p):
         return arbre_abstrait.Fonction(p[0],p.IDENTIFIANT,p.listeParametres,p.listeInstructions)
 
-    @_('TYPE_ENTIER IDENTIFIANT "(" ")" "{" listeInstructions "}"',
-       'TYPE_BOOLEEN IDENTIFIANT "(" ")" "{" listeInstructions "}"')
+    @_('nomtype IDENTIFIANT "(" ")" "{" listeInstructions "}"')
     def fonction(self, p):
         return arbre_abstrait.Fonction(p[0],p.IDENTIFIANT,None,p.listeInstructions)
     @_('parametre')
@@ -61,8 +67,7 @@ class FloParser(Parser):
         p[0].parametres.append(p[2])
         return p[0]
 
-    @_('TYPE_ENTIER IDENTIFIANT',
-       'TYPE_BOOLEEN IDENTIFIANT')
+    @_('nomtype IDENTIFIANT')
     def parametre(self, p):
         return arbre_abstrait.Parametre(p[0],p.IDENTIFIANT)
 
@@ -92,8 +97,7 @@ class FloParser(Parser):
     def ecrire(self, p):
         return arbre_abstrait.Ecrire(p.exprAll)
 
-    @_('TYPE_ENTIER IDENTIFIANT ";"',
-       'TYPE_BOOLEEN IDENTIFIANT ";"')
+    @_('nomtype IDENTIFIANT ";"')
     def declarationVariable(self, p):
         return arbre_abstrait.DeclarationVariable(p[0],p.IDENTIFIANT)
 
@@ -101,8 +105,7 @@ class FloParser(Parser):
     def affectation(self, p):
         return arbre_abstrait.Affectation(p.IDENTIFIANT,p.exprAll)
 
-    @_('TYPE_ENTIER IDENTIFIANT "=" exprAll ";"',
-         'TYPE_BOOLEEN IDENTIFIANT "=" exprAll ";"')
+    @_('nomtype IDENTIFIANT "=" exprAll ";"')
     def declarationAffectation(self, p):
         return arbre_abstrait.DeclarationAffectation(p[0],p.IDENTIFIANT,p.exprAll)
 
@@ -237,4 +240,4 @@ if __name__ == '__main__':
                 arbre = parser.parse(lexer.tokenize(data))
                 arbre.afficher()
             except EOFError:
-                exit()
+                exit(1)

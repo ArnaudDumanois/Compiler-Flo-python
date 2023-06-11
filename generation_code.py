@@ -67,6 +67,16 @@ Affiche le code nasm correspondant à tout un programme
 """
 
 
+def gen_instruction_fonction(fonction):
+    table.maj_nom_fonction_en_cours(fonction.nom)
+    table.maj_type_fonction_en_cours(fonction.type_retour)
+    if (fonction.listeInstructions != None):
+        for instruction in fonction.listeInstructions.instructions:
+            gen_instruction(instruction)
+    table.maj_nom_fonction_en_cours(None)
+    table.maj_type_fonction_en_cours(None)
+
+
 def gen_programme(programme):
     printifm('%include\t"io.asm"')
     printifm('section\t.bss')
@@ -74,11 +84,32 @@ def gen_programme(programme):
     printifm('v$a:	resd	1')
     printifm('section\t.text')
     printifm('global _start')
+
+    if (programme.listeFonctions != None):
+        for fonction in programme.listeFonctions.fonctions:
+            if (fonction.listeParametres != None):
+                offset = 0
+                list_Type = []
+                list_Param = []
+                for parametre in fonction.listeParametres.parametres:
+                    list_Type.append(parametre.type)
+                    offset += 4
+                    param = Parametre(parametre.type, parametre.nom, offset)
+                    list_Param.append(param)
+                table.ajouter_symbole(fonction.nom, fonction.type_retour, len(fonction.listeParametres.parametres)*4, list_Type, list_Param)
+                offset = 0
+            else:
+                table.ajouter_symbole(fonction.nom, fonction.type_retour)
+        for fonction in programme.listeFonctions.fonctions:
+            printifm('_'+fonction.nom+':')
+            gen_instruction_fonction(fonction)
+
     printifm('_start:')
 
     gen_listeInstructions(programme.listeInstructions)
 
-    nasm_instruction("mov", "eax", "1", "", "1 est le code de SYS_EXIT") 
+    nasm_instruction("mov", "eax", "1", "", "1 est le code de SYS_EXIT")
+    nasm_instruction("mov", "ebx", "0", "", "")
     nasm_instruction("int", "0x80", "", "", "exit")
 
     
@@ -103,6 +134,9 @@ def gen_def_fonction(nom_fonction):
 
 def gen_affectation(instruction):
     gen_expression(instruction.expression)
+    assert instruction.expression.type() == table.obtenir_type(instruction.nom), "Erreur de type"
+    nasm_instruction("pop", "eax", "", "", "")
+    nasm_instruction("mov", "[ebp-"+str(table.obtenir_zone_memoire_parametre(instruction.nom))+"]", "eax", "", "")
 
 
 def gen_boucleTantQue(instruction):
@@ -122,15 +156,13 @@ def gen_boucleTantQue(instruction):
 
 
 def gen_retourner(instruction):
+
     gen_expression(instruction.expression)
+    assert instruction.expression.type() == table.obtenir_type_fonction_courante(), f"{instruction.expression}: {instruction.expression.type()} != {table.obtenir_type_fonction_courante()}"
     nasm_instruction("pop", "eax", "", "", "")
     nasm_instruction("ret", "", "", "", "")
 
 
-def gen_appelFonction(instruction):
-    nasm_instruction("push", "ebp", "", "", "")
-    nasm_instruction("call", instruction.nom, "", "", "")
-    nasm_instruction("push", "eax", "", "", "")
 
 
 def gen_conditionnelle(instruction):
@@ -167,6 +199,7 @@ def gen_instruction(instruction):
         gen_ecrire(instruction)
     elif type(instruction) == arbre_abstrait.Affectation:
         gen_affectation(instruction)
+
     elif type(instruction) == arbre_abstrait.Conditionnelle:
         if (type(instruction.condition) == arbre_abstrait.Entier):
             exit(1)
@@ -176,29 +209,20 @@ def gen_instruction(instruction):
         if (type(instruction.expr) == arbre_abstrait.Entier):
             exit(1)
         gen_boucleTantQue(instruction)
+
     elif type(instruction) == arbre_abstrait.Retourner:
-        nom_fonction = table.obtenir_nom_fonction_courante()
-        type_retour = table.obtenir_type_fonction_courante()
-        if (instruction.listeInstructions != None):
-            if (len(instruction.listeInstructions.instructions) *4 != table.obtenir_taille_zone_memoire(instruction.nom)):
-                exit(1)
-        elif type(instruction.expression) != arbre_abstrait.Operation:
-            if type_retour != instruction.expression.type:
-                exit(1)
-        if nom_fonction == None:
-            exit(1)
-        else:
-            gen_expression(instruction.expression)
-            nasm_instruction("pop", "eax", "", "", "")
-            nasm_instruction("ret", "", "", "", "")
+        gen_retourner(instruction)
+
     elif type(instruction) == arbre_abstrait.AppelFonction:
-        gen_appelFonction(instruction)
+        gen_appel_fonction(instruction)
+
+
     elif type(instruction) == arbre_abstrait.DeclarationVariable:
         gen_declarationVariable(instruction)
 
     else:
         print("type instruction inconnu",type(instruction))
-        exit(0)
+        exit(1)
 
 """
 Affiche le code nasm correspondant au fait d'envoyer la valeur entière d'une expression sur la sortie standard
@@ -215,25 +239,59 @@ def gen_expression(expression):
     if type(expression) == arbre_abstrait.Operation:
         gen_operation(expression) #on calcule et empile la valeur de l'opération
     elif type(expression) == arbre_abstrait.Entier:
-            nasm_instruction("push", str(expression.valeur), "", "", "")  #on met sur la pile la valeur entière
+        nasm_instruction("push", str(expression.valeur), "", "", "")  #on met sur la pile la valeur entière
     elif type(expression) == arbre_abstrait.Variable:
-            return
+        expression.type_dyn = table.obtenir_type(expression.nom)
+        assert expression.type_dyn != None, "Type de variable inconnu"
+        global imbrication
+        nasm_instruction("mov", "eax", "[ebp-"+str(table.obtenir_zone_memoire_parametre(expression.nom))+"]", "", "")
+        imbrication += 1
+        nasm_instruction("push", "eax", "", "", "")
     elif type(expression) == arbre_abstrait.Booleen:
-            if expression.valeur == "Vrai":
-                nasm_instruction("push", "1", "", "", "")
-            else:
-                nasm_instruction("push", "0", "", "", "")
+        if expression.valeur == "Vrai":
+            nasm_instruction("push", "1", "", "", "")
+        else:
+            nasm_instruction("push", "0", "", "", "")
     elif type(expression) == arbre_abstrait.Lire:
-            nasm_instruction("mov", "eax", "sinput", "", "")
-            nasm_instruction("call", "readline", "", "", "")
-            nasm_instruction("call", "atoi", "", "", "")
-            nasm_instruction("push", "eax", "", "", "")
+        nasm_instruction("mov", "eax", "sinput", "", "")
+        nasm_instruction("call", "readline", "", "", "")
+        nasm_instruction("call", "atoi", "", "", "")
+        nasm_instruction("push", "eax", "", "", "")
 
     elif type(expression) == arbre_abstrait.AppelFonction:
-            gen_appelFonction(expression)
+        gen_appel_fonction(expression)
+        nasm_instruction("push", "eax", "", "", "")
+
     else:
         print("type d'expression inconnu",type(expression))
-        exit(0)
+        exit(1)
+
+
+def gen_appel_fonction(expression):
+    nasm_instruction("push", "ebp", "", "", "")
+    nasm_instruction("push", "esp", "", "", "")
+    if (expression.listeExpressions != None):
+
+        if (len(expression.listeExpressions.expressions) * 4 != table.obtenir_taille_zone_memoire(expression.nom)):
+            exit(1)
+        for i in range(len(expression.listeExpressions.expressions)):
+            gen_expression(expression.listeExpressions.expressions[i])
+            if (expression.listeExpressions.expressions[i].type() !=
+                    table.obtenir_symboles()[expression.nom]["typeArguments"][i]):
+                print("type argument", expression.listeExpressions.expressions[i].type())
+                print("type symbole", table.obtenir_symboles()[expression.nom]["typeArguments"][i])
+                exit(1)
+    nasm_instruction("mov", "ebp", "[esp+" + str(4*len(expression.listeExpressions.expressions) if expression.listeExpressions else 0) + "]", "", "")
+
+    nasm_instruction("sub", "ebp", str(4), "", "")
+    nasm_instruction("call", '_' + expression.nom, "", "", "")
+    nasm_instruction("add", "esp", str(table.obtenir_taille_zone_memoire(expression.nom)), "", "")
+    nasm_instruction("add", "esp", "4", "", "")
+    nasm_instruction("pop", "ebp", "", "", "")
+    expression.type_dyn = table.obtenir_type(expression.nom)["type"]
+    if expression.type_dyn == None:
+        print("type de fonction inconnu", expression.nom)
+        exit(1)
 
 
 """
@@ -243,6 +301,7 @@ def gen_operation(operation):
     op = operation.op
     if operation.exp2 == None:
         gen_expression(operation.exp1) #on calcule et empile la valeur de exp1
+        assert operation.type() != None
         nasm_instruction("pop", "eax", "", "", "dépile la permière operande dans eax")
         if op == '-':
             nasm_instruction("neg", "eax", "", "", "effectue l'opération -eax et met le résultat dans eax" )
@@ -258,7 +317,7 @@ def gen_operation(operation):
 
         code = {"+":"add","*":"imul"} #Un dictionnaire qui associe à chaque opérateur sa fonction nasm
         #Voir: https://www.bencode.net/blob/nasmcheatsheet.pdf
-
+        assert operation.type() is not None
         if op in ['+']:
             nasm_instruction(code[op], "eax", "ebx", "", "effectue l'opération eax" +op+"ebx et met le résultat dans eax" )
         if op == '*':
@@ -309,7 +368,7 @@ if __name__ == "__main__":
     parser = FloParser()
     if len(sys.argv) < 3 or sys.argv[1] not in ["-nasm","-table"]:
         print("usage: python3 generation_code.py -nasm|-table NOM_FICHIER_SOURCE.flo")
-        exit(0)
+        exit(1)
     if sys.argv[1]  == "-nasm":
         afficher_nasm = True
     else:

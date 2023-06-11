@@ -9,7 +9,10 @@ class Table:
         self.type_fonction_en_cours = None  # Type de la fonction en cours de génération de code
 
     def obtenir_type(self, nom):
-        return self.symboles.get(nom, None)
+        try:
+            return self.symboles[nom]
+        except:
+            return self.obtenir_type_parametre(nom)
 
     def type_fonction(self, nom):
         return self.symboles[nom]["type"]
@@ -48,7 +51,7 @@ class Table:
         variables = self.symboles[self.nom_fonction_en_cours]["listeVariables"]
         for objet in variables:
             if objet.nom == nom:
-                return objet.zone_memoire
+                return objet.memoire
 
     def vider_listeParams(self):
         self.symboles[self.nom_fonction_en_cours]["listeVariables"] = None

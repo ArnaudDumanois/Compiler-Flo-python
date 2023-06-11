@@ -9,4 +9,5 @@ _start:
 	pop	eax		
 	call	iprintLF		
 	mov	eax,	1			 ; 1 est le code de SYS_EXIT
+	mov	ebx,	0	
 	int	0x80				 ; exit

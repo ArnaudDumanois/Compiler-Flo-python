@@ -1,3 +1,0 @@
-ecrire(a < b et b < c ou a > b et b > c);
-ecrire(a == b);
-

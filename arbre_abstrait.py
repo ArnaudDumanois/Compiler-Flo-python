@@ -62,11 +62,26 @@ class Operation:
         afficher("</operation>",indent)
 
     def type(self):
-        if self.exp1.type() == self.exp2.type():
-            if self.op in ["<",">","==","!=",">=","<="]:
+        if self.exp2:
+            if self.exp1.type() == self.exp2.type():
+                if self.op in ["<",">","==","!=",">=","<="]:
+                    assert self.exp1.type() == Type.ENTIER, f"Seuls les entiers peuvent être comparés: {self.exp1} {self.exp1.type()} et {self.exp2} {self.exp2.type()}"
+                    return Type.BOOLEEN
+                elif self.op in ["et","ou"]:
+                    assert self.exp1.type() == Type.BOOLEEN, f"Seuls les booléens peuvent faire ET ou OU: {self.exp1} {self.exp1.type()} et {self.exp2} {self.exp2.type()}"
+                    return Type.BOOLEEN
+                elif self.op in ["+","-","*","/","%"]:
+                    assert self.exp1.type() == Type.ENTIER, f"Seuls les entiers peuvent faire des opérations arithmétiques: {self.exp1} {self.exp1.type()} et {self.exp2} {self.exp2.type()}"
+                    return Type.ENTIER
+                assert False, f"Opération inconnue: {self.op}"
+        else:
+            if self.op == "non":
+                assert self.exp1.type() == Type.BOOLEEN, f"Seuls les booléens peuvent faire NON: {self.exp1} {self.exp1.type()}"
                 return Type.BOOLEEN
-            return self.exp1.type()
-        return Type.NONE
+            elif self.op == "-":
+                assert self.exp1.type() == Type.ENTIER, f"Seuls les entiers peuvent être inversés: {self.exp1} {self.exp1.type()}"
+                return Type.ENTIER
+        assert False, f"Les deux expressions n'ont pas le même type: {self.exp1} {self.exp1.type()} et {self.exp2} {self.exp2.type()}"
 
 class Entier:
     def __init__(self,valeur):
@@ -80,11 +95,12 @@ class Entier:
 class Variable:
     def __init__(self,valeur):
         self.nom = valeur
+        self.type_dyn = Type.NONDEFINI
     def afficher(self,indent=0):
         afficher("[Variable:"+self.nom+"]",indent)
 
     def type(self):
-        return Type.NONDEFINI
+        return self.type_dyn
 
 class Booleen:
     def __init__(self,valeur):
@@ -99,13 +115,15 @@ class AppelFonction:
     def __init__(self,nom,listeExpressions):
         self.nom = nom
         self.listeExpressions = listeExpressions
+        self.type_dyn = Type.NONDEFINI
     def afficher(self,indent=0):
         afficher("[AppelFonction:"+self.nom+"]",indent)
         if self.listeExpressions != None:
             self.listeExpressions.afficher(indent+1)
         else:
             afficher("pas d'arguments",indent+1)
-
+    def type(self):
+        return self.type_dyn
 
 class Lire:
     def __init__(self):
@@ -113,6 +131,9 @@ class Lire:
     def afficher(self,indent=0):
         afficher("<Lire>",indent)
         afficher("</Lire>",indent)
+
+    def type(self):
+        return Type.ENTIER
 
 class ListeExpressions:
     def __init__(self):
@@ -136,7 +157,7 @@ class DeclarationVariable:
         elif self.type == "booleen":
             return Type.BOOLEEN
         else:
-            return Type.NONE
+            assert False, f"Type inconnu: {self.type}"
 
 class Affectation:
     def __init__(self,nom,expression):
@@ -242,13 +263,13 @@ class ListeFonctions:
 
 class Fonction:
     def __init__(self,type,nom,listeParametres,listeInstructions):
-        self.type = type
+        self.type_retour = type
         self.nom = nom
         self.listeParametres = listeParametres
         self.listeInstructions = listeInstructions
         self.taille_pile = 0
     def afficher(self,indent=0):
-        afficher("<fonction type=\""+self.type+"\" nom=\""+self.nom+"\""+ ">",indent)
+        afficher("<fonction type=\""+self.type_retour+"\" nom=\""+self.nom+"\""+ ">",indent)
         if self.listeParametres != None:
             self.listeParametres.afficher(indent+1)
         self.listeInstructions.afficher(indent+1)
@@ -268,9 +289,10 @@ class ListeParametres:
 
 
 class Parametre:
-    def __init__(self,type,nom):
+    def __init__(self,type,nom,memoire=0):
         self.type = type
         self.nom = nom
+        self.memoire = memoire
     def afficher(self,indent=0):
         afficher("<parametre type=\""+self.type+"\" nom=\""+self.nom+"\""+ "/>",indent)
 
