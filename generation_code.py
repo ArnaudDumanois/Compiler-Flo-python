@@ -2,11 +2,16 @@ import sys
 from analyse_lexicale import FloLexer
 from analyse_syntaxique import FloParser
 import arbre_abstrait
+from arbre_abstrait import *
+from table_symbole import *
 
 num_etiquette_courante = -1 #Permet de donner des noms différents à toutes les étiquettes (en les appelant e0, e1,e2,...)
 
 afficher_table = False
 afficher_nasm = False
+table = Table({}) #Table des symboles globale
+imbrication = 0 #Permet de savoir dans quelle fonction on est (pour la table des symboles)
+
 def nom_nouvelle_etiquette():
     global num_etiquette_courante
     num_etiquette_courante +=1
@@ -60,6 +65,8 @@ def nasm_nouvelle_etiquette(num_etiquette_courante=None):
 """
 Affiche le code nasm correspondant à tout un programme
 """
+
+
 def gen_programme(programme):
     printifm('%include\t"io.asm"')
     printifm('section\t.bss')
@@ -68,9 +75,12 @@ def gen_programme(programme):
     printifm('section\t.text')
     printifm('global _start')
     printifm('_start:')
+
     gen_listeInstructions(programme.listeInstructions)
+
     nasm_instruction("mov", "eax", "1", "", "1 est le code de SYS_EXIT") 
     nasm_instruction("int", "0x80", "", "", "exit")
+
     
 """
 Affiche le code nasm correspondant à une suite d'instructions
@@ -84,42 +94,6 @@ Affiche le code nasm correspondant à une instruction
 """
 
 
-def gen_sinonSi(sinonSi):
-    global num_etiquette_courante
-    num_etiquette_courante+=1
-    etiquette_finale = "e"+str(num_etiquette_courante)
-    gen_expression(sinonSi.exprSi)
-    nasm_instruction("pop", "eax", "", "", "")
-    nasm_instruction("cmp", "eax", "0", "", "")
-    nasm_instruction("je", etiquette_finale, "", "", "")
-    gen_listeInstructions(sinonSi.listeInstructionSi)
-    nasm_instruction(etiquette_finale+":", "", "", "", "")
-
-
-def gen_listeSinonSi(listeSinonSi):
-    # Conditionnelles are not iterable, so we have to do it manually
-    for sinonSi in listeSinonSi:
-        gen_sinonSi(sinonSi)
-
-
-def gen_conditionnelle(instruction):
-    # now we have the nom_nouvelle_etiquette function to generate new labels
-    etiquetteSinon = nom_nouvelle_etiquette()
-    etiquetteFinale = nom_nouvelle_etiquette()
-    gen_expression(instruction.exprSi)
-    nasm_instruction("pop", "eax", "", "", "")
-    nasm_instruction("cmp", "eax", "0", "", "")
-    nasm_instruction("je", etiquetteSinon, "", "", "")
-    gen_listeInstructions(instruction.listeInstructionsSi)
-    nasm_instruction("jmp", etiquetteFinale, "", "", "")
-    nasm_instruction(etiquetteSinon+":", "", "", "", "")
-    if instruction.listeSinonSi != None:
-        for sinonSi in instruction.listeSinonSi:
-            gen_sinonSi(sinonSi)
-    if instruction.listeSinon != None:
-        gen_listeInstructions(instruction.listeSinon)
-    nasm_instruction(etiquetteFinale+":", "", "", "", "")
-
 
 def gen_def_fonction(nom_fonction):
     printifm(nom_fonction+":")
@@ -127,13 +101,8 @@ def gen_def_fonction(nom_fonction):
     nasm_instruction("mov", "ebp", "esp", "", "")
     nasm_instruction("sub", "esp", "4", "", "")
 
-
-
-
 def gen_affectation(instruction):
     gen_expression(instruction.expression)
-    nasm_instruction("pop", "eax", "", "", "")
-    nasm_instruction("mov", "DWORD [v$"+instruction.nom+"]", "eax", "", "")
 
 
 def gen_boucleTantQue(instruction):
@@ -155,7 +124,42 @@ def gen_boucleTantQue(instruction):
 def gen_retourner(instruction):
     gen_expression(instruction.expression)
     nasm_instruction("pop", "eax", "", "", "")
-    nasm_instruction("mov", "DWORD [v$a]", "eax", "", "")
+    nasm_instruction("ret", "", "", "", "")
+
+
+def gen_appelFonction(instruction):
+    nasm_instruction("push", "ebp", "", "", "")
+    nasm_instruction("call", instruction.nom, "", "", "")
+    nasm_instruction("push", "eax", "", "", "")
+
+
+def gen_conditionnelle(instruction):
+    # afficher le code nasm correspondant à l'expression
+    global num_etiquette_courante
+    gen_expression(instruction.condition)
+    nasm_instruction("pop", "eax", "", "", "")
+    nasm_instruction("cmp", "eax", "0", "", "")
+    if instruction.listeInstructionsSinon != None:
+        etiquette_sinon = nasm_nouvelle_etiquette(num_etiquette_courante)
+        num_etiquette_courante+=1
+        nasm_instruction("je", etiquette_sinon, "", "", "")
+        gen_listeInstructions(instruction.listeInstructions)
+        etiquette_finale = nasm_nouvelle_etiquette(num_etiquette_courante)
+        num_etiquette_courante+=1
+        nasm_instruction("jmp", etiquette_finale, "", "", "")
+        nasm_instruction(etiquette_sinon+":", "", "", "", "")
+        gen_listeInstructions(instruction.listeInstructionsSinon)
+        nasm_instruction(etiquette_finale+":", "", "", "", "")
+    else:
+        etiquette_finale = nasm_nouvelle_etiquette(num_etiquette_courante)
+        num_etiquette_courante+=1
+        nasm_instruction("je", etiquette_finale, "", "", "")
+        gen_listeInstructions(instruction.listeInstructions)
+        nasm_instruction(etiquette_finale+":", "", "", "", "")
+
+
+def gen_declarationVariable(instruction):
+    return
 
 
 def gen_instruction(instruction):
@@ -164,11 +168,33 @@ def gen_instruction(instruction):
     elif type(instruction) == arbre_abstrait.Affectation:
         gen_affectation(instruction)
     elif type(instruction) == arbre_abstrait.Conditionnelle:
+        if (type(instruction.condition) == arbre_abstrait.Entier):
+            exit(1)
         gen_conditionnelle(instruction)
+
     elif type(instruction) == arbre_abstrait.BoucleTantQue:
+        if (type(instruction.expr) == arbre_abstrait.Entier):
+            exit(1)
         gen_boucleTantQue(instruction)
     elif type(instruction) == arbre_abstrait.Retourner:
-        gen_retourner(instruction)
+        nom_fonction = table.obtenir_nom_fonction_courante()
+        type_retour = table.obtenir_type_fonction_courante()
+        if (instruction.listeInstructions != None):
+            if (len(instruction.listeInstructions.instructions) *4 != table.obtenir_taille_zone_memoire(instruction.nom)):
+                exit(1)
+        elif type(instruction.expression) != arbre_abstrait.Operation:
+            if type_retour != instruction.expression.type:
+                exit(1)
+        if nom_fonction == None:
+            exit(1)
+        else:
+            gen_expression(instruction.expression)
+            nasm_instruction("pop", "eax", "", "", "")
+            nasm_instruction("ret", "", "", "", "")
+    elif type(instruction) == arbre_abstrait.AppelFonction:
+        gen_appelFonction(instruction)
+    elif type(instruction) == arbre_abstrait.DeclarationVariable:
+        gen_declarationVariable(instruction)
 
     else:
         print("type instruction inconnu",type(instruction))
@@ -191,7 +217,7 @@ def gen_expression(expression):
     elif type(expression) == arbre_abstrait.Entier:
             nasm_instruction("push", str(expression.valeur), "", "", "")  #on met sur la pile la valeur entière
     elif type(expression) == arbre_abstrait.Variable:
-            nasm_instruction("push", "DWORD [v$"+expression.nom+"]", "", "", "")
+            return
     elif type(expression) == arbre_abstrait.Booleen:
             if expression.valeur == "Vrai":
                 nasm_instruction("push", "1", "", "", "")
@@ -202,6 +228,9 @@ def gen_expression(expression):
             nasm_instruction("call", "readline", "", "", "")
             nasm_instruction("call", "atoi", "", "", "")
             nasm_instruction("push", "eax", "", "", "")
+
+    elif type(expression) == arbre_abstrait.AppelFonction:
+            gen_appelFonction(expression)
     else:
         print("type d'expression inconnu",type(expression))
         exit(0)
@@ -213,7 +242,7 @@ Affiche le code nasm pour calculer l'opération et la mettre en haut de la pile
 def gen_operation(operation):
     op = operation.op
     if operation.exp2 == None:
-        gen_expression(operation.exp1)
+        gen_expression(operation.exp1) #on calcule et empile la valeur de exp1
         nasm_instruction("pop", "eax", "", "", "dépile la permière operande dans eax")
         if op == '-':
             nasm_instruction("neg", "eax", "", "", "effectue l'opération -eax et met le résultat dans eax" )

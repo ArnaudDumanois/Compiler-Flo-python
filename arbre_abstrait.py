@@ -1,9 +1,18 @@
 """
 Affiche une chaine de caractère avec une certaine identation
 """
+import enum
+from typing import Optional, List
 def afficher(s,indent=0):
     print(" "*indent+s)
 
+class Type(enum.Enum):
+    NONE = enum.auto()
+    ENTIER = enum.auto()
+    BOOLEEN = enum.auto()
+    FONCTION = enum.auto()
+    VIDE = enum.auto()
+    NONDEFINI = enum.auto()
 
 class Programme:
     def __init__(self,ListeFonctions ,listeInstructions):
@@ -16,6 +25,9 @@ class Programme:
         self.listeInstructions.afficher(indent+1)
         afficher("</programme>",indent)
 
+    def type(self):
+        raise NotImplementedError("Un Programme n'a pas de type")
+
 class ListeInstructions:
     def __init__(self):
         self.instructions = []
@@ -24,6 +36,10 @@ class ListeInstructions:
         for instruction in self.instructions:
             instruction.afficher(indent+1)
         afficher("</listeInstructions>",indent)
+
+    def ajouter_instruction(self,instruction):
+        self.instructions.append(instruction)
+
 
 class Ecrire:
     def __init__(self,exp):
@@ -44,23 +60,40 @@ class Operation:
         if self.exp2 != None:
             self.exp2.afficher(indent+1)
         afficher("</operation>",indent)
+
+    def type(self):
+        if self.exp1.type() == self.exp2.type():
+            if self.op in ["<",">","==","!=",">=","<="]:
+                return Type.BOOLEEN
+            return self.exp1.type()
+        return Type.NONE
+
 class Entier:
     def __init__(self,valeur):
         self.valeur = valeur
     def afficher(self,indent=0):
         afficher("[Entier:"+str(self.valeur)+"]",indent)
 
+    def type(self):
+        return Type.ENTIER
+
 class Variable:
-    def __init__(self,nom):
-        self.nom = nom
+    def __init__(self,valeur):
+        self.nom = valeur
     def afficher(self,indent=0):
         afficher("[Variable:"+self.nom+"]",indent)
+
+    def type(self):
+        return Type.NONDEFINI
 
 class Booleen:
     def __init__(self,valeur):
         self.valeur = valeur
     def afficher(self,indent=0):
         afficher("[Booleen:"+self.valeur+"]",indent)
+
+    def type(self):
+        return Type.BOOLEEN
 
 class AppelFonction:
     def __init__(self,nom,listeExpressions):
@@ -70,7 +103,8 @@ class AppelFonction:
         afficher("[AppelFonction:"+self.nom+"]",indent)
         if self.listeExpressions != None:
             self.listeExpressions.afficher(indent+1)
-
+        else:
+            afficher("pas d'arguments",indent+1)
 
 
 class Lire:
@@ -96,6 +130,14 @@ class DeclarationVariable:
     def afficher(self,indent=0):
         afficher("<declarationVariable type=\""+self.type+"\" nom=\""+self.nom+"\"/>",indent)
 
+    def type(self):
+        if self.type == "entier":
+            return Type.ENTIER
+        elif self.type == "booleen":
+            return Type.BOOLEEN
+        else:
+            return Type.NONE
+
 class Affectation:
     def __init__(self,nom,expression):
         self.nom = nom
@@ -104,6 +146,9 @@ class Affectation:
         afficher("<affectation nom=\""+self.nom+"\""+ ">",indent)
         self.expression.afficher(indent+1)
         afficher("</affectation>",indent)
+
+    def type(self):
+        return Type.NONE
 
 class DeclarationAffectation:
     def __init__(self,type,nom,expression):
@@ -115,41 +160,45 @@ class DeclarationAffectation:
         self.expression.afficher(indent+1)
         afficher("</declarationAffectation>",indent)
 
+    def type(self):
+        if self.type == "entier":
+            return Type.ENTIER
+        elif self.type == "booleen":
+            return Type.BOOLEEN
+        else:
+            return Type.NONE
+
 
 class Conditionnelle:
-    def __init__(self,exprSi,listeInstructionsSi,listeSinonSi,listeInstructionSinon):
-        self.exprSi = exprSi
-        self.listeInstructionsSi = listeInstructionsSi
-        self.listeSinonSi = listeSinonSi
-        self.listeSinon = listeInstructionSinon
+    def __init__(self,condition, listeInstructions, listeInstructionsSinon : Optional[ListeInstructions]):
+        self.condition = condition
+        self.listeInstructions = listeInstructions
+        self.listeInstructionsSinon = listeInstructionsSinon
 
-    def __iter__(self):
-        return iter([self.exprSi,self.listeInstructionsSi,self.listeSinonSi,self.listeSinon])
-
-    def __next__(self):
-        if self.listeSinonSi == None:
-            raise StopIteration
-        element = self.listeSinonSi
-        self.listeSinonSi = self.listeSinonSi.suivant
-        return element
     def afficher(self,indent=0):
         afficher("<conditionnelle>",indent)
-        afficher("<Si>",indent)
-        self.exprSi.afficher(indent+1)
-        afficher("</Si>",indent)
-        afficher("<Alors>",indent)
-        self.listeInstructionsSi.afficher(indent+1)
-        afficher("</Alors>",indent)
-        if self.listeSinonSi != None:
-            afficher("<SinonSi>",indent)
-            self.listeSinonSi.afficher(indent+1)
-            afficher("</SinonSi>",indent)
-        if self.listeSinon != None:
-            afficher("<Sinon>",indent)
-            self.listeSinon.afficher(indent+1)
-            afficher("</Sinon>",indent)
+        afficher("<condition>",indent)
+        self.condition.afficher(indent+1)
+        afficher("</condition>",indent)
+        afficher("<instructions>",indent)
+        self.listeInstructions.afficher(indent+1)
+        afficher("</instructions>",indent)
+        if self.listeInstructionsSinon != None:
+            afficher("<sinon>",indent)
+            self.listeInstructionsSinon.afficher(indent+1)
+            afficher("</sinon>",indent)
         afficher("</conditionnelle>",indent)
 
+    def ajouter_sinonsi(self,condition,listeInstructions):
+        if (self.listeInstructionsSinon and isinstance(self.listeInstructionsSinon.instructions[-1],Conditionnelle)):
+            self.listeInstructionsSinon.instructions[-1].ajouter_sinonsi(condition,listeInstructions)
+        else:
+            if self.listeInstructionsSinon == None:
+                self.listeInstructionsSinon = ListeInstructions()
+            self.listeInstructionsSinon.ajouter_instruction(Conditionnelle(condition,listeInstructions,None))
+
+    def ajouter_sinon(self,listeInstructions):
+        self.ajouter_sinonsi(Booleen("Vrai"),listeInstructions)
 
 class BoucleTantQue:
     def __init__(self,expr,listeInstructions):
@@ -165,6 +214,9 @@ class BoucleTantQue:
         afficher("</instructionsTantQue>",indent)
         afficher("</boucleTantQue>",indent)
 
+    def type(self):
+        return Type.NONE
+
 
 class Retourner:
     def __init__(self,expression):
@@ -174,6 +226,8 @@ class Retourner:
         self.expression.afficher(indent+1)
         afficher("</retourner>",indent)
 
+    def type(self):
+        return Type.NONE
 
 class ListeFonctions:
     def __init__(self):
@@ -185,12 +239,14 @@ class ListeFonctions:
         afficher("</listeFonctions>",indent)
 
 
+
 class Fonction:
     def __init__(self,type,nom,listeParametres,listeInstructions):
         self.type = type
         self.nom = nom
         self.listeParametres = listeParametres
         self.listeInstructions = listeInstructions
+        self.taille_pile = 0
     def afficher(self,indent=0):
         afficher("<fonction type=\""+self.type+"\" nom=\""+self.nom+"\""+ ">",indent)
         if self.listeParametres != None:
@@ -198,6 +254,8 @@ class Fonction:
         self.listeInstructions.afficher(indent+1)
         afficher("</fonction>",indent)
 
+    def type(self):
+        return Type.FONCTION
 
 class ListeParametres:
     def __init__(self):
@@ -215,3 +273,11 @@ class Parametre:
         self.nom = nom
     def afficher(self,indent=0):
         afficher("<parametre type=\""+self.type+"\" nom=\""+self.nom+"\""+ "/>",indent)
+
+    def type(self):
+        if self.type == "entier":
+            return Type.ENTIER
+        elif self.type == "booleen":
+            return Type.BOOLEEN
+        else:
+            return Type.NONE
